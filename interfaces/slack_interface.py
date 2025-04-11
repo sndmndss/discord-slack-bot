@@ -17,6 +17,8 @@ async def handle_message_events(body, say, client):
     event = body.get("event", {})
     user_id = event.get("user")
     text = event.get("text", "")
+    if "joined the channel" in text or "left the channel" in text:
+        return
 
     if not user_id:
         return
