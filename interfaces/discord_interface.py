@@ -45,7 +45,7 @@ async def normalise_content(message: discord.Message) -> str:
 
     content = EMOJI_RE.sub("", content)
 
-    return " ".join(content.split())
+    return "\n".join(" ".join(line.split()) for line in content.splitlines())
 
 
 @client.event

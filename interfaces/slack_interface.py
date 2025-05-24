@@ -65,7 +65,8 @@ async def normalise_slack_content(text: str, client: AsyncWebClient) -> str:
         return "" if name in custom_emojis else match.group(0)
 
     text = EMOJI_RE.sub(emoji_repl, text)
-    return " ".join(text.split())
+
+    return "\n".join(" ".join(line.split()) for line in text.splitlines())
 
 app = AsyncApp(token=SLACK_BOT_KEY)
 client = AsyncWebClient(token=SLACK_BOT_KEY)
