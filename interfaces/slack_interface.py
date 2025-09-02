@@ -1,19 +1,20 @@
-import re
 import asyncio
+import re
 from typing import Dict
 
-from settings.config import SLACK_SOCKET_KEY, SLACK_BOT_KEY
-from utils import discord_send_message_as
-
-from slack_bolt.async_app import AsyncApp
 from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
+from slack_bolt.async_app import AsyncApp
 from slack_sdk.web.async_client import AsyncWebClient
+
+from settings.config import SLACK_BOT_KEY, SLACK_SOCKET_KEY
+from utils import discord_send_message_as
 
 USER_MENTION_RE = re.compile(r"<@([UW][A-Z0-9]+)(?:\|[^>]*)?>")
 CHANNEL_MENTION_RE = re.compile(r"<#(C[A-Z0-9]+)(?:\|[^>]*)?>")
 USERGROUP_MENTION_RE = re.compile(r"<!subteam\^([A-Z0-9]+)(?:\|[^>]*)?>")
 SPECIAL_MENTION_RE = re.compile(r"<!(channel|here|everyone)>")
 EMOJI_RE = re.compile(r":([+\w-]+):")
+
 
 async def normalise_slack_content(text: str, client: AsyncWebClient) -> str:
     user_ids = set(USER_MENTION_RE.findall(text))
@@ -23,13 +24,21 @@ async def normalise_slack_content(text: str, client: AsyncWebClient) -> str:
     async def fetch_user(uid: str):
         try:
             info = await client.users_info(user=uid)
+            if not info:
+                raise ValueError("No user info found")
             profile = info["user"]["profile"]
-            name = profile.get("display_name") or profile.get("real_name") or info["user"]["name"]
+            name = (
+                profile.get("display_name")
+                or profile.get("real_name")
+                or info["user"]["name"]
+            )
             return uid, name
         except Exception:
             return uid, "unknown"
 
-    user_name_map: Dict[str, str] = dict(await asyncio.gather(*(fetch_user(uid) for uid in user_ids)))
+    user_name_map: Dict[str, str] = dict(
+        await asyncio.gather(*(fetch_user(uid) for uid in user_ids))
+    )
 
     async def fetch_channel(cid: str):
         try:
@@ -38,14 +47,18 @@ async def normalise_slack_content(text: str, client: AsyncWebClient) -> str:
         except Exception:
             return cid, "unknown-channel"
 
-    channel_name_map: Dict[str, str] = dict(await asyncio.gather(*(fetch_channel(cid) for cid in channel_ids)))
+    channel_name_map: Dict[str, str] = dict(
+        await asyncio.gather(*(fetch_channel(cid) for cid in channel_ids))
+    )
 
     usergroup_name_map: Dict[str, str] = {}
     if usergroup_ids:
         try:
             groups = await client.usergroups_list()
             handle_lookup = {g["id"]: g["handle"] for g in groups["usergroups"]}
-            usergroup_name_map = {gid: handle_lookup.get(gid, "group") for gid in usergroup_ids}
+            usergroup_name_map = {
+                gid: handle_lookup.get(gid, "group") for gid in usergroup_ids
+            }
         except Exception:
             usergroup_name_map = {gid: "group" for gid in usergroup_ids}
 
@@ -55,9 +68,15 @@ async def normalise_slack_content(text: str, client: AsyncWebClient) -> str:
     except Exception:
         custom_emojis = set()
 
-    text = USER_MENTION_RE.sub(lambda m: f"@{user_name_map.get(m.group(1), 'unknown')}", text)
-    text = CHANNEL_MENTION_RE.sub(lambda m: f"#{channel_name_map.get(m.group(1), 'unknown-channel')}", text)
-    text = USERGROUP_MENTION_RE.sub(lambda m: f"@{usergroup_name_map.get(m.group(1), 'group')}", text)
+    text = USER_MENTION_RE.sub(
+        lambda m: f"@{user_name_map.get(m.group(1), 'unknown')}", text
+    )
+    text = CHANNEL_MENTION_RE.sub(
+        lambda m: f"#{channel_name_map.get(m.group(1), 'unknown-channel')}", text
+    )
+    text = USERGROUP_MENTION_RE.sub(
+        lambda m: f"@{usergroup_name_map.get(m.group(1), 'group')}", text
+    )
     text = SPECIAL_MENTION_RE.sub(lambda m: f"@{m.group(1)}", text)
 
     def emoji_repl(match):
@@ -68,8 +87,10 @@ async def normalise_slack_content(text: str, client: AsyncWebClient) -> str:
 
     return "\n".join(" ".join(line.split()) for line in text.splitlines())
 
+
 app = AsyncApp(token=SLACK_BOT_KEY)
 client = AsyncWebClient(token=SLACK_BOT_KEY)
+
 
 @app.event("message")
 async def handle_message_events(body, say, client: AsyncWebClient):
@@ -83,11 +104,16 @@ async def handle_message_events(body, say, client: AsyncWebClient):
     try:
         user_info = await client.users_info(user=user_id)
         user_data = user_info["user"]
-        displayname = user_data["profile"].get("display_name") or user_data["profile"].get("real_name") or user_data["name"]
+        displayname = (
+            user_data["profile"].get("display_name")
+            or user_data["profile"].get("real_name")
+            or user_data["name"]
+        )
         clean_text = await normalise_slack_content(text, client)
         await discord_send_message_as(clean_text, displayname, None)
     except Exception as e:
         print(f"Unexpected error: {e}")
+
 
 async def run_slack_bot():
     handler = AsyncSocketModeHandler(app, SLACK_SOCKET_KEY)
