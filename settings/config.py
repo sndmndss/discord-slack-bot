@@ -12,7 +12,7 @@ DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 assert DISCORD_CHAT_ID is not None, "DISCORD_CHAT_ID is not set in the environment"
 assert SLACK_CHAT_ID is not None, "SLACK_CHAT_ID is not set in the environment"
-assert SLACK_SOCKET_KEY is not None, "SLACK_API_KEY is not set in the environment"
+assert SLACK_SOCKET_KEY is not None, "SLACK_SOCKET_KEY is not set in the environment"
 assert DISCORD_API_KEY is not None, "DISCORD_API_KEY is not set in the environment"
 assert SLACK_BOT_KEY is not None, "SLACK_BOT_KEY is not set in the environment"
 assert DISCORD_WEBHOOK_URL is not None, "DISCORD_WEBHOOK_URL is not set in the environment"

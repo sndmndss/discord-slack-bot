@@ -1,5 +1,6 @@
 import asyncio
 import re
+import logging
 from typing import Dict
 
 from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
@@ -111,8 +112,8 @@ async def handle_message_events(body, say, client: AsyncWebClient):
         )
         clean_text = await normalise_slack_content(text, client)
         await discord_send_message_as(clean_text, displayname, None)
-    except Exception as e:
-        print(f"Unexpected error: {e}")
+    except Exception:
+        logging.exception("Unexpected error handling Slack message event")
 
 
 async def run_slack_bot():

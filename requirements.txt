@@ -17,3 +17,7 @@ slack_sdk==3.35.0
 toml==0.10.2
 urllib3==2.4.0
 yarl==1.19.0
+
+peewee==3.18.2
+
+psycopg2-binary==2.9.9
